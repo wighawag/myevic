@@ -59,7 +59,41 @@ SECTIONS {
 
 	} > ROM
 
-	. = ALIGN(4);
+	/* The RAM-init table goes IMMEDIATELY after .text and BEFORE the .data
+	   load image, which is upstream's order: in the upstream-shipped
+	   bin/myevic.bin the table sits at img1_end and .data follows it.
+
+	   The order is not cosmetic. GetFirmwareSize() (myevic.s) computes the
+	   image size as Data_Start_ROM + Data_Size, i.e. it assumes .data is the
+	   LAST thing in the image. With the table after .data the image is 24 bytes
+	   longer than that, and myevic's virtual USB disk (storage.c) serves a
+	   truncated firmware file.
+
+	   Placing it here also avoids the problem the previous layout had to work
+	   around: .data is assigned "> RAM" with an AT() load address, and current
+	   ld does not advance the ROM region pointer past an AT() image, so anything
+	   placed in ROM AFTER .data needed a hand-computed address to avoid landing
+	   on top of it. Nothing is placed after .data any more, so no hand-computed
+	   address is needed.
+
+	   The symbols referenced here (Data_Start_ROM, Data_Size, SRAMZ_*) are
+	   defined further down; ld resolves forward references at the end. */
+	.raminit : {
+		. = ALIGN(4);
+		RAMInitTable = .;
+
+		LONG(Data_Start_ROM)
+		LONG(Data_Start_RAM)
+		LONG(Data_Size)
+
+		LONG(SRAMZ_Start)
+		LONG(SRAMZ_Start)
+		LONG(SRAMZ_Size)
+
+		RAMInitEnd = .;
+	} > ROM
+
+	. = ALIGN(8);
 	Data_Start_ROM = .;
 
 	.data : AT (Data_Start_ROM) {
@@ -70,6 +104,13 @@ SECTIONS {
 		. = ALIGN(4);
 		Data_End_RAM = .;
 	} > RAM
+
+	/* The .data load image must still fit in ROM. ld checks the regions of
+	   output sections, but nothing checks an AT() image hanging off the end of
+	   ROM, so assert it explicitly: an image that overran ROM would be cut off
+	   by the flasher and boot with half-initialised RAM. */
+	ASSERT(Data_Start_ROM + SIZEOF(.data) <= ORIGIN(ROM) + LENGTH(ROM),
+	       "the .data load image does not fit in ROM")
 
 	Data_Size = Data_End_RAM - Data_Start_RAM;
 
@@ -89,43 +130,11 @@ SECTIONS {
 	} > RAM
 
 	SRAMZ_Size = SRAMZ_End - SRAMZ_Start;
-
-	/* The .data initialiser image lives in ROM at Data_Start_ROM for SIZEOF(.data)
-	   bytes, but .data was assigned "> RAM", so the ROM region pointer never
-	   advanced past it and still sits at Data_Start_ROM. Without advancing it by
-	   hand, the table below is laid down ON TOP of the .data load image, which
-	   current ld reports as:
-	     section .text LMA [..] overlaps section .data LMA [..]
-
-	   Older binutils advanced the region pointer past the AT() load image by
-	   itself, so upstream was NOT emitting a corrupt image. Verified: both the
-	   upstream-shipped bin/myevic.bin and a build with this fix carry exactly
-	   452 (0x1C4) bytes after img1_end, i.e. .data (0x1A4) + this table (0x18)
-	   + alignment. This fix reproduces the original layout, it does not just
-	   silence the diagnostic.
-
-	   The address MUST be an explicit address expression on the output section:
-	   a bare ". = ..." before it is ignored, because for a section carrying
-	   "> REGION" and no address expression ld takes the region's next free
-	   address instead of the location counter. */
-	.raminit (Data_Start_ROM + SIZEOF(.data)) : {
-		. = ALIGN(4);
-		RAMInitTable = .;
-
-		LONG(Data_Start_ROM)
-		LONG(Data_Start_RAM)
-		LONG(Data_Size)
-
-		LONG(SRAMZ_Start)
-		LONG(SRAMZ_Start)
-		LONG(SRAMZ_Size)
-
-		RAMInitEnd = .;
-
-	} > ROM
 }
 
-/* Renamed from ".text" to ".raminit": upstream had TWO output sections both
-   named .text, which is legal but made the overlap diagnostic above read as
-   ".text overlaps .data" when the real culprit was this trailing table. Nothing
-   references the section by name; RAMInitTable/RAMInitEnd are used as symbols. */
+/* Named ".raminit", not ".text": upstream had TWO output sections both named
+   .text, which is legal but makes every diagnostic about the table read as if
+   it were about the code. Nothing references the section by name; the startup
+   code and GetFirmwareSize() use the RAMInitTable/RAMInitEnd symbols, and the
+   Makefile's objcopy must list it with -j or the table is dropped from the
+   image. */

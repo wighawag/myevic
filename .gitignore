@@ -64,3 +64,6 @@ wrkspc.txt
 nuvoton-sdk/
 .venv/
 .with_game.*
+
+# Build output (see OUTDIR in the Makefile)
+build/

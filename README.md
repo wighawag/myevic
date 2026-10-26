@@ -4,7 +4,7 @@
 >
 > - Back up your DataFlash and check your box code before flashing anything.
 > - The limiter can only refuse to fire. Power regulation (`src/atomizer.c`) is unchanged.
-> - `bin/myevic.bin` is upstream's stock build, not the limiter. To try the limiter, build it from source.
+> - `bin/myevic.bin` is upstream's stock build, not the limiter. To try the limiter, build it from source; the output goes to `build/myevic.bin`.
 > - The Flappy Bird game is left out of the default build to free ROM; `make WITH_GAME=1` restores it and then the image no longer fits.
 
 ## **myevic**

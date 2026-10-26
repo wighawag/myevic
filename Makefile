@@ -72,7 +72,12 @@ MYEVIC_OBJS := src/myevic.o \
 AEABI_OBJS := src/aeabi/aeabi_memset-thumb2.o \
 	src/aeabi/aeabi_memclr.o
 
-OUTDIR := bin
+# Build output goes to build/, NOT bin/. bin/myevic.bin is tracked: it is
+# upstream's stock build, kept as a known-good image. With OUTDIR = bin, every
+# build overwrote it with our image, and `make clean` (rm -rf $(OUTDIR))
+# deleted it outright, so the tracked "stock" binary silently stopped being
+# stock. build/ is gitignored.
+OUTDIR := build
 DOCDIR := doc
 
 CPU := cortex-m4

@@ -57,3 +57,14 @@ driver/*.sys
 *.map
 genuine/
 wrkspc.txt
+
+# Build output of build-gcc6.sh
+build/
+
+# Local build dependencies, fetched not authored
+nuvoton-sdk/
+.venv/
+.with_game.*
+
+# Upstream ignores *.sh; this one is part of the branch.
+!build-gcc6.sh

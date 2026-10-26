@@ -45,8 +45,7 @@ MYEVIC_OBJS := src/myevic.o \
 	src/meusbd.o \
 	src/vcom.o \
 	src/storage.o \
-	src/flappy.o \
-	src/fbdata.o \
+	src/pufflimit.o \
 	src/fonts.o \
 	src/display.o \
 	src/SSD1306.o \
@@ -158,6 +157,14 @@ LIBDIRS := -L$(ARMGCC)/arm-none-eabi/lib \
 
 CFLAGS += -Wall -mcpu=$(CPU) -mfpu=$(FPU) -mthumb -Os -fdata-sections -ffunction-sections -std=c99
 CFLAGS += -fno-builtin-printf
+# Puff limiter. The Flappy Bird game (flappy.o, fbdata.o) is OUT of the object
+# list above, for ROM: built with GCC 6.3.1 (build-gcc6.sh) the limiter image
+# WITH the game is 102676 bytes against a 102400-byte ROM, and upstream's
+# linker script does not notice, because it never checks the .data load image
+# against ROM. inc/flappy.h supplies no-op stubs when WITH_GAME is 0; every
+# external call into the game is behind gFlags.playing_fb, which only flappy.c
+# sets, so those calls are dead.
+CFLAGS += -DWITH_GAME=0
 CFLAGS += $(INCDIRS)
 
 ASFLAGS := -mcpu=$(CPU) -mfpu=$(FPU)

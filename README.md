@@ -1,5 +1,7 @@
 > **This fork (`pufflimit` branch) adds a puff limiter to myevic: a rolling window of N puffs per period, a per-hour schedule, and a refusal screen with a countdown. It has NOT yet run on a device.**
 >
+> ⚠️ **Do not flash this yet.** One test so far: on an eVic VTwo Mini (E115, HW 1.00) it did not boot (no screen, USB not recognised). Stock firmware was restored by holding `+` while reconnecting USB. The cause is not known yet; the main suspect is the modern toolchain rather than the limiter itself, which only runs when you press fire.
+>
 > - Back up your DataFlash and check your box code before flashing anything.
 > - The limiter can only refuse to fire. Power regulation (`src/atomizer.c`) is unchanged.
 > - `bin/myevic.bin` is upstream's stock build, not the limiter. To try the limiter, build it from source.
